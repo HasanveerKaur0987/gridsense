@@ -1,0 +1,41 @@
+[0m21:50:35.611364 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1047c5be0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105cfbb10>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105cfb9d0>]}
+
+
+============================== 21:50:35.614215 | 8e971b33-e3f5-4a5a-846e-2833b5850ae9 ==============================
+[0m21:50:35.614215 [info ] [MainThread]: Running with dbt=1.11.13
+[0m21:50:35.614481 [debug] [MainThread]: running dbt with arguments {'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'warn_error': 'None', 'profiles_dir': '/Users/hasan/.dbt', 'send_anonymous_usage_stats': 'True', 'log_cache_events': 'False', 'partial_parse': 'True', 'fail_fast': 'False', 'write_json': 'True', 'quiet': 'False', 'static_parser': 'True', 'target_path': 'None', 'use_experimental_parser': 'False', 'use_colors': 'True', 'indirect_selection': 'eager', 'invocation_command': 'dbt init gridsense_dbt --skip-profile-setup', 'log_format': 'default', 'debug': 'False', 'cache_selected_only': 'False', 'introspect': 'True', 'empty': 'None', 'log_path': 'logs', 'no_print': 'None', 'version_check': 'True', 'printer_width': '80'}
+[0m21:50:35.622689 [info ] [MainThread]: Creating dbt configuration folder at /Users/hasan/.dbt
+[0m21:50:35.623429 [info ] [MainThread]: A project called gridsense_dbt already exists here.
+[0m21:50:35.625246 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 0.043362375, "process_in_blocks": "0", "process_kernel_time": 0.098891, "process_mem_max_rss": "107790336", "process_out_blocks": "0", "process_user_time": 0.578361}
+[0m21:50:35.625549 [debug] [MainThread]: Command `dbt init` succeeded at 21:50:35.625492 after 0.04 seconds
+[0m21:50:35.625736 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105d02fd0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105d83ad0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105d29bf0>]}
+[0m21:50:35.625905 [debug] [MainThread]: Flushing usage events
+[0m21:50:36.258022 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m21:54:51.089269 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1121a1be0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1139c3b10>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1139c39d0>]}
+
+
+============================== 21:54:51.092137 | d0fbb025-728f-4ee7-9d05-fef16b11e6be ==============================
+[0m21:54:51.092137 [info ] [MainThread]: Running with dbt=1.11.13
+[0m21:54:51.092391 [debug] [MainThread]: running dbt with arguments {'empty': 'None', 'send_anonymous_usage_stats': 'True', 'write_json': 'True', 'debug': 'False', 'use_experimental_parser': 'False', 'log_cache_events': 'False', 'use_colors': 'True', 'printer_width': '80', 'partial_parse': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'log_path': 'logs', 'quiet': 'False', 'cache_selected_only': 'False', 'profiles_dir': '/Users/hasan/.dbt', 'version_check': 'True', 'fail_fast': 'False', 'no_print': 'None', 'introspect': 'True', 'static_parser': 'True', 'indirect_selection': 'eager', 'log_format': 'default', 'warn_error': 'None', 'invocation_command': 'dbt init gridsense_dbt --skip-profile-setup', 'target_path': 'None'}
+[0m21:54:51.098429 [debug] [MainThread]: Starter project path: /Users/hasan/Documents/gridsense/.venv/lib/python3.13/site-packages/dbt/include/starter_project
+[0m21:54:51.101614 [info ] [MainThread]: 
+Your new dbt project "gridsense_dbt" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m21:54:51.103047 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 0.042976126, "process_in_blocks": "0", "process_kernel_time": 0.10299, "process_mem_max_rss": "108068864", "process_out_blocks": "0", "process_user_time": 0.59087}
+[0m21:54:51.103268 [debug] [MainThread]: Command `dbt init` succeeded at 21:54:51.103227 after 0.04 seconds
+[0m21:54:51.103415 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1139cafd0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x113a4fad0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1139f1bf0>]}
+[0m21:54:51.103555 [debug] [MainThread]: Flushing usage events
+[0m21:54:51.772217 [debug] [MainThread]: An error was encountered while trying to flush usage events
