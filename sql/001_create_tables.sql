@@ -23,3 +23,5 @@ CREATE TABLE IF NOT EXISTS ingest_runs (
     status         TEXT        NOT NULL DEFAULT 'running',  -- running / success / failed
     error_message  TEXT
 );
+
+SELECT COUNT(*) FROM raw_pool_price;
