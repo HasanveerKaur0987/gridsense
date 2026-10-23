@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: daily_prices
+    columns:
+      - name: price_date
+        data_tests:
+          - unique
+          - not_null

@@ -24,4 +24,3 @@ CREATE TABLE IF NOT EXISTS ingest_runs (
     error_message  TEXT
 );
 
-SELECT COUNT(*) FROM raw_pool_price;
