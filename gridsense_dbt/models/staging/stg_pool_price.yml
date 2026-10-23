@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: stg_pool_price
+    columns:
+      - name: hour_start_utc
+        data_tests:
+          - unique
+          - not_null
