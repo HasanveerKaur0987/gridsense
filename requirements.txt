@@ -4,3 +4,4 @@ psycopg[binary]
 pandas
 dbt-core==1.11.13
 dbt-postgres==1.11.0
+streamlit
