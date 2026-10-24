@@ -1,23 +1,33 @@
-name: Hourly ingest
+name: Ingest AESO pool prices
 
 on:
   schedule:
-    - cron: "15 * * * *"
-  workflow_dispatch:
+    - cron: "15 * * * *"   # every hour at :15
+  workflow_dispatch:        # lets you click "Run workflow" by hand
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      - run: pip install -r requirements.txt
+      - name: Install packages
+        run: pip install -r requirements.txt
 
-      - run: python scripts/ingest_pool_price.py
+      - name: Load new prices
         env:
           AESO_API_KEY: ${{ secrets.AESO_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/ingest_pool_price.py
+
+      - name: Rebuild dbt models and run tests      # ← new
+        working-directory: gridsense_dbt
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+        run: dbt build --profiles-dir .
