@@ -69,10 +69,35 @@ LAST_RUN_SQL = """
     where status = 'success'
 """
 
+# Newest forecast day: forecast vs real price vs "same as yesterday", hour by hour
+TODAY_FORECAST_SQL = """
+    select f.forecast_date,
+           f.hour_ending::int as hour_ending,
+           f.predicted_price,
+           p.pool_price       as real_price,
+           y.pool_price       as yesterday_price
+    from public.forecasts f
+    left join analytics.stg_pool_price p
+        on p.hour_start_utc = f.forecast_for_utc
+    left join analytics.stg_pool_price y
+        on y.hour_start_utc = f.forecast_for_utc - interval '24 hours'
+    where f.model_name = 'lightgbm_v1'
+      and f.forecast_date = (select max(forecast_date) from public.forecasts)
+    order by f.hour_ending
+"""
+
+ACCURACY_SQL = """
+    select forecast_date, hours_compared, model_mae, yesterday_mae
+    from analytics.forecast_accuracy
+    order by forecast_date
+"""
+
 daily = run_query(DAILY_SQL)
 hourly = run_query(HOURLY_SQL)
 yearly = run_query(YEARLY_SQL)
 last_run = run_query(LAST_RUN_SQL)["last_run"].iloc[0]
+today_fc = run_query(TODAY_FORECAST_SQL)
+accuracy = run_query(ACCURACY_SQL)
 
 # Only finished days for averages and charts
 complete = daily[daily["is_complete"]].copy()
@@ -109,7 +134,81 @@ c4.metric(f"Spike hours in {latest_year_num} ($100+)", f"{latest_year['spike_pct
 st.divider()
 
 
-# ---------- 5. Chart: daily price + 7-day average ----------
+# ---------- 5. Forecast: today's prices, hour by hour ----------
+st.subheader("Price forecast")
+
+if today_fc.empty:
+    st.info("No forecast saved yet. The forecast job runs once a day.")
+else:
+    fc_date = today_fc["forecast_date"].iloc[0]
+    st.write(f"Forecast for **{fc_date:%b %d, %Y}**, made with prices up to the end of the day before "
+             "(LightGBM model). Real prices appear as each hour finishes.")
+
+    fc_chart = today_fc.rename(columns={
+        "predicted_price": "Forecast",
+        "real_price": "Real price",
+        "yesterday_price": "Same as yesterday",
+    }).set_index("hour_ending")[["Forecast", "Real price", "Same as yesterday"]]
+    st.line_chart(fc_chart, x_label="Hour ending", y_label="$/MWh",
+                  color=["#f28e2b", "#4e79a7", "#bab0ac"])  # orange, blue, grey
+
+    # How far off so far today (only hours that already have a real price)
+    done = today_fc.dropna(subset=["real_price"])
+    if not done.empty:
+        model_err = (done["predicted_price"] - done["real_price"]).abs().mean()
+        yest_err = (done["yesterday_price"] - done["real_price"]).abs().mean()
+        f1, f2, f3 = st.columns(3)
+        f1.metric("Hours with a real price", f"{len(done)} of 24")
+        f2.metric("Model: avg miss per hour", f"${model_err:.2f}")
+        f3.metric("Same as yesterday: avg miss", f"${yest_err:.2f}")
+
+
+# ---------- 6. Forecast: accuracy day by day ----------
+st.subheader("How good is the forecast?")
+
+if accuracy.empty:
+    st.info("No finished forecast days yet.")
+else:
+    accuracy["forecast_date"] = pd.to_datetime(accuracy["forecast_date"])
+    total_model = accuracy["model_mae"].mean()
+    total_yest = accuracy["yesterday_mae"].mean()
+    better = 100 * (1 - total_model / total_yest)
+
+    a1, a2, a3, a4 = st.columns(4)
+    a1.metric("Days tracked (live)", f"{len(accuracy)}")
+    a2.metric("Model: avg miss per hour", f"${total_model:.2f}")
+    a3.metric("Same as yesterday: avg miss", f"${total_yest:.2f}")
+    a4.metric("Model is better by", f"{better:.0f}%")  # negative = model is worse
+
+    if len(accuracy) >= 2:
+        # Running average: the average miss over all days so far
+        acc_chart = pd.DataFrame({
+            "Model (running avg)": accuracy["model_mae"].expanding().mean().round(2),
+            "Same as yesterday (running avg)": accuracy["yesterday_mae"].expanding().mean().round(2),
+        }, index=accuracy["forecast_date"])
+        st.line_chart(acc_chart, y_label="Avg miss per hour ($/MWh)")
+
+    st.dataframe(
+        accuracy.sort_values("forecast_date", ascending=False).rename(columns={
+            "forecast_date": "Date",
+            "hours_compared": "Hours",
+            "model_mae": "Model miss ($/MWh)",
+            "yesterday_mae": "Same-as-yesterday miss ($/MWh)",
+        }),
+        hide_index=True,
+        column_config={"Date": st.column_config.DateColumn(format="MMM D, YYYY")},
+    )
+
+st.caption("Miss = average distance between the forecast and the real price per hour (MAE). "
+           "On 16 months of test data (Jul 2025 to Oct 2026) the model missed by \\$30.34 per hour "
+           "vs \\$42.05 for same-as-yesterday: **28% better**. On normal hours it is about 48% better, "
+           "but it never predicts spikes (\\$100+), because they depend on outages, weather and wind, "
+           "which are not in the data yet.")
+
+st.divider()
+
+
+# ---------- 7. Chart: daily price + 7-day average ----------
 st.subheader("Daily average price")
 
 period = st.radio("Show", ["Last 90 days", "Last year", "All data"], horizontal=True)
@@ -123,7 +222,7 @@ st.line_chart(
 st.caption("The 7-day average smooths out spike days so the trend is easier to see.")
 
 
-# ---------- 6. Chart: price by hour of day ----------
+# ---------- 8. Chart: price by hour of day ----------
 left, right = st.columns(2)
 
 with left:
@@ -135,7 +234,7 @@ with left:
     st.caption("Hour ending 20 = 7–8 PM. Evenings cost the most: high demand and no solar.")
 
 
-# ---------- 7. Chart: spikes and average vs median per year ----------
+# ---------- 9. Chart: spikes and average vs median per year ----------
 with right:
     st.subheader("Spike hours per year")
     yearly_chart = yearly.copy()
@@ -159,7 +258,7 @@ st.caption("A few spike hours pull the average up to about 2x the median, "
 st.divider()
 
 
-# ---------- 8. Findings ----------
+# ---------- 10. Findings ----------
 st.subheader("Key findings")
 st.markdown("""
 - **Evenings are the most expensive.** 7–8 PM averages about 4x the price of 3–4 AM.
@@ -174,7 +273,10 @@ with st.expander("How this works"):
 - **Data:** AESO public API (pool price), Jan 2023 to now.
 - **Pipeline:** Python + GitHub Actions load new hours into PostgreSQL (Neon) every hour.
   Each run re-loads yesterday and today, so missed runs never leave gaps.
-- **Cleaning:** dbt models (`stg_pool_price`, `daily_prices`) with 6 data tests
-  (no duplicates, no missing hours, prices between $0 and $999.99).
+- **Cleaning:** dbt models (`stg_pool_price`, `daily_prices`, `forecast_accuracy`) with 8 data tests
+  (no duplicates, no missing hours, prices between \\$0 and \\$999.99).
+- **Forecast:** once a day a LightGBM model is trained on all past prices and predicts
+  every hour of today, using only data up to the end of yesterday (no peeking).
+  Clues: hour, day of week, month, the price 1, 2 and 7 days ago, and yesterday's average and max.
 - **Times:** stored in UTC to avoid daylight saving problems, shown in Alberta time.
 """)
