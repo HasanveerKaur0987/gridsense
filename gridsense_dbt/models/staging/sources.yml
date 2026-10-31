@@ -6,3 +6,4 @@ sources:
     tables:
       - name: raw_pool_price
       - name: ingest_runs
+      - name: forecasts        

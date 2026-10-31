@@ -31,3 +31,8 @@ jobs:
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
           PGDATABASE: ${{ secrets.PGDATABASE }}
         run: dbt build --profiles-dir .
+
+      - name: Make today's forecast (only once per day)    # ← new
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python forecast/predict_today.py

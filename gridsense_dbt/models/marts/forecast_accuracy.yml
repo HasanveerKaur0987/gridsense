@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: forecast_accuracy
+    columns:
+      - name: forecast_date
+        data_tests:
+          - unique
+          - not_null
