@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install packages
+        run: pip install -r requirements.txt pytest
+
+      - name: Run tests
+        run: pytest -v
+
+      # Checks that all dbt models and YAML files are valid, without touching the database.
+      # The profile still needs these values, so we give it fake ones.
+      - name: Check dbt project
+        working-directory: gridsense_dbt
+        env:
+          PGHOST: localhost
+          PGUSER: ci
+          PGPASSWORD: ci
+          PGDATABASE: ci
+        run: dbt parse --profiles-dir .
