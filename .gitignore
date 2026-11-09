@@ -6,6 +6,4 @@ __pycache__/
 logs/
 .user.yml
 target/
-logs/
-.user.yml
 exports/

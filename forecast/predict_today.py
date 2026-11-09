@@ -25,6 +25,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 MODEL_NAME = "lightgbm_v1"
 
 # Since Nov 1, 2026, Alberta Time (ABT) is UTC-6 all year (no more clock changes).
+# We only forecast future days, so a fixed offset is correct and doesn't depend
+# on the computer having the newest time zone data.
 ABT = timezone(timedelta(hours=-6), "ABT")
 
 
@@ -37,7 +39,7 @@ def future_hours(target_date):
         "hour_start_utc": hours_utc,
         "price_date": pd.Timestamp(target_date),
         "hour_ending": local.hour + 1,
-        "day_of_week": local.dayofweek + 1,   # Monday = 1 ... Sunday = 7
+        "day_of_week": local.dayofweek + 1,   # Monday = 1 ... Sunday = 7 (like isodow)
         "month": local.month,
         "year": local.year,
         "pool_price": float("nan"),          # unknown: this is what we predict
@@ -64,7 +66,7 @@ def save(conn, today):
             "INSERT INTO forecasts "
             "(forecast_for_utc, forecast_date, hour_ending, predicted_price, model_name) "
             "VALUES (%s, %s, %s, %s, %s) "
-            "ON CONFLICT (forecast_for_utc, model_name) DO NOTHING",
+            "ON CONFLICT (forecast_for_utc, model_name) DO NOTHING",  # first forecast stays
             rows,
         )
 
@@ -104,7 +106,7 @@ def main():
         model = lgb.LGBMRegressor(objective="l1", n_estimators=500, learning_rate=0.05,
                                   num_leaves=31, random_state=42, verbose=-1)
         model.fit(train[FEATURES], train["pool_price"])
-        today["predicted_price"] = model.predict(today[FEATURES]).clip(min=0)
+        today["predicted_price"] = model.predict(today[FEATURES]).clip(min=0)  # prices are never below $0
 
         save(conn, today)
 
