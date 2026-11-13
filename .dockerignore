@@ -1,0 +1,9 @@
+.env
+.venv
+.git
+__pycache__ 
+*.pyc
+gridsense_dbt/target 
+gridsense_dbt/logs
+exports
+.DS_Store
