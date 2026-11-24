@@ -1,105 +1,108 @@
 # GridSense ⚡
 
-**A live data platform for the Alberta electricity market.**
-Every hour it loads new pool prices from AESO, cleans and tests them with dbt, and shows the results on a public dashboard.
+[![Tests](https://github.com/HasanveerKaur0987/gridsense/actions/workflows/ci.yml/badge.svg)](https://github.com/HasanveerKaur0987/gridsense/actions/workflows/ci.yml)
+
+**A live data platform and price forecast for the Alberta electricity market.**
+Every hour it loads new prices from AESO, cleans and tests them with dbt, and every day it forecasts tomorrow's 24 hourly prices with a LightGBM model.
 
 🔗 **Live dashboard:** https://gridsense-alberta.streamlit.app
 
 ---
 
-## What it does
+## How it works
 
 ```
 AESO public API
-     ↓  Python + GitHub Actions (every hour)
-PostgreSQL on Neon: raw_pool_price        ← raw data, never changed
-     ↓  dbt (runs right after each load)
-analytics.stg_pool_price (view)           ← clean hourly data
-analytics.daily_prices (table)            ← one row per day
-     ↓  6 dbt data tests
-Streamlit dashboard (public link)
+     ↓  Python loader, runs every hour on GitHub Actions
+PostgreSQL (Neon): raw prices + a log of every load
+     ↓  dbt: clean models + 8 data quality tests
+analytics tables (hourly, daily, forecast accuracy)
+     ↓  LightGBM: forecast the next day's 24 hourly prices
+Streamlit dashboard (public, read-only database user)
 ```
 
-- **33,000+ hours** of prices, from Jan 1, 2023 to now
-- **No missing hours and no duplicates**, checked by dbt tests on every run
-- **10 SQL analysis questions** answered with CTEs and window functions (`sql/questions/`)
+- **34,000+ hours** of prices, from Jan 2023 to now, with **no missing hours** (checked by a dbt test on every run)
+- Fully automatic: loading, testing and forecasting all run with no manual steps
+
+## Forecast results
+
+The model predicts each hour of the next day, using only data known by midnight.
+
+**Backtest:** trained on Jan 2023 to Jun 2025, tested on 11,682 unseen hours (Jul 2025 to Oct 2026)
+
+| Forecast | Average miss (MAE, $/MWh) |
+| --- | --- |
+| **LightGBM (my model)** | **$30.34** |
+| Same as yesterday | $42.05 |
+| Same as last week | $46.16 |
+
+**27.8% better than "same as yesterday"**, the usual baseline for price forecasts.
+
+**Live, since Oct 30, 2026:** the model's average miss is **$18.50** vs **$30.73** for "same as yesterday" (**40% better**), and it beat the baseline on **20 of 25 days** (as of Nov 24, 2026).
+
+**Where it struggles:** on normal hours (95% of the time) it is about **48% better** than the baseline. It does not predict sudden price spikes, and those few hours cause about half of all its error. Predicting them would need outage, weather and wind data.
 
 ## Key findings
 
-1. **Evenings are the most expensive time.** 7–8 PM averages **$137/MWh**, while 3–4 AM averages **$35/MWh**, about 4 times less. Demand is high in the evening, and solar stops after sunset.
-2. **Price spikes almost disappeared.** In 2023, **27.9%** of hours were $100/MWh or more. In 2026 (so far), it's **3.8%**.
-3. **Weekends are cheaper every year**, by 14% to 43% depending on the year.
-4. **The January 2024 cold snap** was the most expensive week in the data: Jan 11–17, 2024 averaged **$420/MWh per day**. Jan 14, 2024 was the most expensive single day ($707/MWh).
-5. **The average price misleads.** It is about **2 times the median** every year, because a few spike hours pull it up. In 2026, a typical hour (median) costs **$18.72**, but the average is $33.44.
+1. **Evenings cost about 4 times more than nights:** 7–8 PM averages $137/MWh vs $35/MWh at 3–4 AM.
+2. **Price spikes almost disappeared:** 27.9% of hours were $100/MWh or more in 2023, only 3.8% in 2026.
+3. **The January 2024 cold snap** was the most expensive week in the data. Jan 14, 2024 averaged $707/MWh.
+4. **The average price misleads:** it is about 2 times the median, because a few spike hours pull it up.
 
-*Numbers are as of Oct 23, 2026. The live dashboard always shows the latest data.*
+All 10 analysis questions (CTEs, window functions) are in [`sql/questions/`](sql/questions/).
 
 ## Hard problems I solved
 
-| Problem | What I did | Why |
-| --- | --- | --- |
-| **Daylight saving time** | Stored every hour in **UTC** as the primary key; showed Alberta time only on screen | In Alberta time, 1:00 AM happens twice in November and 2:00 AM never happens in March. UTC never repeats or skips |
-| **AESO dates are Alberta dates** | The loader asks for Alberta "yesterday + today", not UTC dates | GitHub's servers run on UTC, so "today" would be wrong for 6–7 hours a day |
-| **Prices arrive late** | Unfinished hours are saved as NULL and filled in on a later run (counted as "updated") | AESO posts final prices with a delay |
-| **GitHub Actions skips scheduled runs** | Every run re-loads the last 2 days, safe to re-run (upsert, no duplicates) | Only about 1 in 4 hourly runs actually started in the first days, but **no data was lost**, and the missing-hours test proves it |
-| **Keeping the database safe** | The public dashboard uses a **read-only** database user | Even if that password leaked, nobody could change or delete data |
+| Problem | Solution |
+| --- | --- |
+| **Clock changes** | Every hour is stored in **UTC**, so no hour repeats or goes missing. When Alberta stopped changing clocks in Nov 2026, the pipeline needed **no changes** |
+| **No peeking at the future** | Time-based train/test split, and each forecast only uses prices up to midnight before the forecast day |
+| **GitHub skips scheduled runs** | Every run reloads the last 2 days with an upsert (no duplicates), so a skipped run loses no data. The missing-hours test proves it |
+| **Prices arrive late** | Unfinished hours are saved as empty and filled in on a later run |
+| **Keeping data safe** | The public dashboard uses a **read-only** database user. Secrets live in `.env`, GitHub Secrets and Streamlit Secrets, never in code |
 
-## Data quality tests (dbt)
+## Testing
 
-- `hour_start_utc` is **unique** and **not null**
-- `price_date` in `daily_prices` is **unique** and **not null**
-- **No missing hours:** every UTC hour from the first to the last is present
-- **Prices are in range:** between $0 and $999.99 (Alberta's price cap)
-
-If any test fails, the GitHub Actions run turns red.
+- **Data tests (dbt):** unique, not-null, no missing hours, prices in range. They run after every hourly load, and a failure turns the run red.
+- **Code tests (pytest + GitHub Actions):** run on every push. They check the forecast features with small fake data, so they need no database or secrets.
 
 ## Tech stack
 
-| Part | Tool |
-| --- | --- |
-| Data source | AESO public API (pool price) |
-| Loading | Python, psycopg, GitHub Actions (hourly) |
-| Database | PostgreSQL 18 on Neon |
-| Cleaning + tests | dbt (dbt-core 1.11, dbt-postgres) |
-| Analysis | SQL (CTEs, `RANK`, `LAG`, rolling averages, `percentile_cont`) |
-| Dashboard | Streamlit (Streamlit Community Cloud) |
+**Python** (pandas, psycopg, LightGBM) · **SQL** · **PostgreSQL** (Neon) · **dbt** · **GitHub Actions** · **Streamlit** · **Docker** · **pytest**
+
+## Run it yourself
+
+1. Get a free AESO API key at [developer-apim.aeso.ca](https://developer-apim.aeso.ca) and a free PostgreSQL database (for example, Neon).
+2. Make a `.env` file with `AESO_API_KEY`, `DATABASE_URL`, `PGHOST`, `PGUSER`, `PGPASSWORD` and `PGDATABASE`.
+3. Install, create the tables, load data and build:
+   ```bash
+   pip install -r requirements.txt
+   python scripts/create_tables.py          # also run sql/002_create_forecasts.sql
+   python scripts/ingest_pool_price.py --start 2023-01-01
+   cd gridsense_dbt && dbt build --profiles-dir . && cd ..
+   python forecast/predict_today.py
+   ```
+4. Start the dashboard, with Python or Docker:
+   ```bash
+   streamlit run dashboard/app.py
+   ```
+   ```bash
+   docker build -t gridsense-dashboard .
+   set -a; source .env; set +a
+   docker run --rm -p 8501:8501 -e DATABASE_URL gridsense-dashboard
+   ```
+   Then open http://localhost:8501.
 
 ## Project layout
 
 ```
 gridsense/
-├── .github/workflows/ingest.yml   # hourly: load prices, then dbt build
-├── scripts/ingest_pool_price.py   # the loader (hourly + backfill modes)
-├── sql/
-│   ├── 001_create_tables.sql      # raw_pool_price + ingest_runs
-│   └── questions/                 # 10 SQL analysis questions + findings
-├── gridsense_dbt/                 # dbt models and tests
-│   ├── models/staging/            # stg_pool_price
-│   ├── models/marts/              # daily_prices
-│   └── tests/                     # missing hours, price range
-└── dashboard/app.py               # Streamlit dashboard
+├── scripts/            # create tables, hourly loader (with backfill mode)
+├── sql/                # table definitions + 10 analysis questions
+├── gridsense_dbt/      # dbt models and data tests
+├── forecast/           # features, training, daily forecast
+├── dashboard/          # Streamlit app
+├── tests/              # pytest tests
+├── Dockerfile          # dashboard container
+└── .github/workflows/  # hourly pipeline + CI tests
 ```
-
-## Run it yourself
-
-1. Get a free API key at [developer-apim.aeso.ca](https://developer-apim.aeso.ca) and a free PostgreSQL database (for example, Neon).
-2. Make a `.env` file with `AESO_API_KEY`, `DATABASE_URL`, `PGHOST`, `PGUSER`, `PGPASSWORD` and `PGDATABASE`.
-3. Install packages and create the tables:
-   ```bash
-   pip install -r requirements.txt
-   python scripts/create_tables.py
-   ```
-4. Load data, then build and test:
-   ```bash
-   python scripts/ingest_pool_price.py --start 2023-01-01
-   cd gridsense_dbt && dbt build --profiles-dir .
-   ```
-5. Start the dashboard:
-   ```bash
-   streamlit run dashboard/app.py
-   ```
-
-## Coming next
-
-- Next-day price forecast, measured against two simple baselines ("same as yesterday" and "same as last week")
-- Daily tracking of forecast error on the dashboard
