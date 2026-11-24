@@ -1,4 +1,4 @@
-"""Week 4, step 1: load hourly prices and build features for the forecast.
+"""Load hourly prices from the database and build the features for the forecast.
 
 Run from the gridsense folder:
     python forecast/features.py

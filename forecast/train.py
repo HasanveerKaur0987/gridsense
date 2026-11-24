@@ -1,4 +1,4 @@
-"""Week 4, step 2: train a LightGBM model and compare it with the baselines.
+"""Train a LightGBM model and compare it with two simple baselines (backtest).
 
 Run from the gridsense folder:
     python forecast/train.py

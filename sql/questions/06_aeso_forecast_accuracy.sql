@@ -20,4 +20,4 @@ order by year;
 -- Bias positive every year (+$2.76 to +$7.59) → AESO always guesses too high
 -- NOTE: stored forecast = AESO's LAST update before the hour (short-term),
 --       so it's a tough reference, not a fair benchmark for a next-day model.
---       Fair benchmarks for Week 4 = "same as yesterday" and "same as last week".
+--       Fair benchmarks for the forecast model = "same as yesterday" and "same as last week".

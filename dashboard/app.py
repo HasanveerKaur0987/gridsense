@@ -4,8 +4,8 @@ Run from the gridsense folder:
     streamlit run dashboard/app.py
 """
 import os
+from datetime import timedelta, timezone
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 
 import pandas as pd
 import psycopg
@@ -15,7 +15,8 @@ from dotenv import load_dotenv
 # ---------- 1. Settings ----------
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL") or st.secrets["DATABASE_URL"]
-ALBERTA = ZoneInfo("America/Edmonton")
+# Since Nov 1, 2026, Alberta Time is UTC-6 all year (no more clock changes)
+ALBERTA = timezone(timedelta(hours=-6), "ABT")
 
 st.set_page_config(page_title="GridSense", page_icon="⚡", layout="wide")
 

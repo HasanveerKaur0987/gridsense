@@ -1,4 +1,4 @@
-"""Week 4, step 3B: forecast every hour of TODAY (Alberta) and save it to Neon.
+"""Forecast every hour of today (Alberta time) and save it to the forecasts table.
 
 Run from the gridsense folder:
     python forecast/predict_today.py
@@ -39,7 +39,7 @@ def future_hours(target_date):
         "hour_start_utc": hours_utc,
         "price_date": pd.Timestamp(target_date),
         "hour_ending": local.hour + 1,
-        "day_of_week": local.dayofweek + 1,   # Monday = 1 ... Sunday = 7 (like isodow)
+        "day_of_week": local.day_of_week + 1,   # Monday = 1 ... Sunday = 7 (like isodow)
         "month": local.month,
         "year": local.year,
         "pool_price": float("nan"),          # unknown: this is what we predict

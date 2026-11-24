@@ -14,7 +14,6 @@ import os
 import sys
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 
 import psycopg
 import requests
@@ -28,7 +27,10 @@ if not API_KEY or not DATABASE_URL:
     raise SystemExit("AESO_API_KEY or DATABASE_URL is missing. Put them in your .env file.")
 
 URL = "https://apimgw.aeso.ca/public/poolprice-api/v1.1/price/poolPrice"
-ALBERTA = ZoneInfo("America/Edmonton")  # AESO dates are Alberta dates
+# AESO dates are Alberta dates. Since Nov 1, 2026, Alberta Time is UTC-6 all year
+# (no more clock changes), so a fixed offset is correct and doesn't depend on the
+# computer having the newest time zone data.
+ALBERTA = timezone(timedelta(hours=-6), "ABT")
 
 
 # ---------- 2. Get data from AESO ----------

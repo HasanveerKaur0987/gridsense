@@ -8,7 +8,7 @@ def make_fake_prices():
     hours = pd.date_range("2026-01-05", periods=168, freq="h")  # 7 days, starting Monday
     return pd.DataFrame({
         "price_date": hours.normalize(),     # the date of each hour
-        "day_of_week": hours.dayofweek + 1,  # Monday = 1 ... Sunday = 7
+        "day_of_week": hours.day_of_week + 1,  # Monday = 1 ... Sunday = 7
         "pool_price": range(168),            # price = row number (0, 1, 2, ...)
     })
 
